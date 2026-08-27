@@ -1,0 +1,535 @@
+.. _app_gesture_recognition:
+
+Gesture recognition
+###################
+
+.. contents::
+   :local:
+   :depth: 2
+
+This application demonstrates a gesture-based remote control device using Nordic Edge AI Lab solution.
+
+Application overview
+********************
+
+The gesture recognition application demonstrates how to use an nRF Edge AI model to recognize hand gestures from motion sensor data and expose them as standard HID inputs over Bluetooth® Low Energy.
+There are two variants of the application that differ in where the model is executed:
+
+* The Neuton variant, which uses a CPU-based model, also called the Neuton model.
+* The Axon variant, which uses an NPU-based model, also called the Axon model.
+
+When connected to a PC, the device appears as a Bluetooth LE HID device, allowing recognized gestures to control media playback or presentation slides.
+Based on accelerometer and gyroscope data, the nRF Edge AI model recognizes eight gesture classes:
+
+* Swipe right
+* Swipe left
+* Double shake
+* Double tap
+* Rotation clockwise
+* Rotation counter-clockwise
+* No gestures (IDLE)
+* Unknown gesture
+
+The neural network model is trained using the `Nordic Edge AI Lab`_.
+The whole process how to capture data and train the model is described in the `Nordic Edge AI Lab documentation`_.
+You can also see `Gesture recognition use-case demo video`_.
+
+Requirements
+************
+
+The application supports the following development kits:
+
+.. table-from-sample-yaml::
+
+Development kits
+================
+
+.. tabs::
+
+   .. tab:: Thingy53
+
+      The `Nordic Thingy:53 <Nordic Thingy:53 Multi-protocol IoT prototyping platform_>`_  is an easy-to-use IoT prototyping platform.
+      It allows to create prototypes and proofs-of-concept without building custom hardware.
+      The Thingy:53 is built around the nRF5340 SoC, a dual-core wireless SoC.
+      The processing power and memory size of its dual Arm Cortex-M33 processors enable it to run embedded machine learning (ML) models directly on the device.
+
+      The Thingy:53 also includes multiple integrated sensors, such as environmental sensors, color and light sensors, accelerometers, and a magnetometer.
+      It is powered by a rechargeable lithium-polymer (Li-Po) battery that can be charged through USB-C.
+      There is also an external 4-pin JST connector compatible with the Stemma, Qwiic, and Grove standards for hardware accessories.
+
+      .. figure:: images/nordic_thingy.jpg
+         :alt: Nordic Thingy:53 kit
+
+   .. tab:: nRF54LM20 DK
+
+      The :doc:`nRF54LM20 DK <zephyr:boards/nordic/nrf54lm20dk/doc/index>` development kit has two variants with different SoCs: nRF54LM20A and nRF54LM20B.
+      Both variants require a sensor evaluation board:
+
+      .. list-table::
+         :header-rows: 0
+
+         * - .. figure:: images/sensor_EB_top.jpeg
+                :alt: Sensor Evaluation Board top view
+
+           - .. figure:: images/sensor_EB_bottom.jpeg
+                :alt: Sensor Evaluation Board bottom view
+
+      The Sensor Evaluation Board is connected to the DK through the **EXP** port on the nRF54LM20 DK board:
+
+      .. figure:: images/nrf54lm20_EB.jpeg
+         :alt: nRF54LM20 DK sensor EXP port
+
+   .. tab:: nRF54L15 TAG
+
+      The :doc:`nRF54L15TAG <zephyr:boards/nordic/nrf54l15tag/doc/index>` is a development board for the nRF54L15 SoC.
+      It is a small, low-cost development board that is perfect for prototyping and testing.
+
+      .. list-table::
+         :header-rows: 0
+
+         * - .. figure:: images/nrf54l15tag_top.jpeg
+                :alt: nRF54L15 TAG top view
+
+           - .. figure:: images/nrf54l15tag_bottom.jpeg
+                :alt: nRF54L15 TAG bottom view
+
+Sensor BMI270
+=============
+
+The `Bosch BMI270`_ is a 3-axis accelerometer and 3-axis gyroscope IMU sensor.
+All development kits use the sensor to collect data for gesture recognition.
+
+Setting up software environment
+*******************************
+
+For full instructions on preparing your development environment, see :ref:`setting_up_environment`.
+
+User interface
+**************
+
+This section describes the user interface available on development kits in this application.
+
+Buttons and LEDs
+================
+
+The project has two keyboard control modes: Presentation Control and Music Control.
+Depending on the control mode, recognized gestures are mapped to different keyboard keys.
+Switch between control modes by pressing the user button.
+
+When Bluetooth LE HID pairing with MITM protection is enabled, the application also supports explicit passkey confirmation and rejection using the user button with short and long presses.
+
+The following table explains the LED indications for control modes and Bluetooth connection states on each device, and shows which button switches between control modes:
+
+.. list-table:: LED indication in different device states
+   :header-rows: 1
+   :widths: 8 18 27 27 27
+
+   * - Device
+     - Mode switch
+     - No Bluetooth connection
+     - Presentation Control mode
+     - Music Control mode
+
+   * - Thingy:53
+     - Press the button on top of the device to switch between Presentation Control and Music Control modes.
+     - * LED glows red.
+
+       .. figure:: images/device-led-no-ble-connect_thingy.gif
+          :alt: Thingy53 LED red, no BLE connection
+     - * LED glows blue.
+
+       .. figure:: images/device-led-ble-connect-presentation-mode_thingy.gif
+          :alt: Thingy53 LED blue, presentation mode
+     - * LED glows green.
+
+       .. figure:: images/device-led-ble-connect-music-mode_thingy.gif
+          :alt: Thingy53 LED green, music mode
+
+   * - nRF54LM20 DK
+     - Press the **BUTTON 0** to switch between Presentation Control and Music Control modes.
+     - * **LED0** glows.
+
+       .. figure:: images/device-led-no-ble-connect_nrf54lm20.gif
+          :alt: nRF54LM20 DK LED0, no BLE connection
+     - * **LED2** glows.
+
+       .. figure:: images/device-led-ble-connect-presentation-mode_nrf54lm20.gif
+          :alt: nRF54LM20 DK LED2, presentation mode
+     - * **LED1** glows.
+
+       .. figure:: images/device-led-ble-connect-music-mode_nrf54lm20.gif
+          :alt: nRF54LM20 DK LED1, music mode
+
+   * - nRF54L15 TAG
+     - Press the **BTN1** to switch between Presentation Control and Music Control modes.
+     - * LED glows red.
+
+       .. figure:: images/device-led-no-ble-connect_nrf54l15tag.jpeg
+          :alt: nRF54L15 TAG LED red, no BLE connection
+
+     - * LED glows blue.
+
+       .. figure:: images/device-led-ble-connect-presentation-mode_nrf54l15tag.jpeg
+          :alt: nRF54L15 TAG LED blue, presentation mode
+
+     - * LED glows green.
+
+       .. figure:: images/device-led-ble-connect-music-mode_nrf54l15tag.jpeg
+          :alt: nRF54L15 TAG LED green, music mode
+
+Bluetooth LE HID passkey confirmation
+=====================================
+
+In Bluetooth HID mode, when ``CONFIG_BLE_MITM_AUTH=y`` and passkey confirmation is requested, the serial log prints the passkey and the available button actions.
+The single user button changes its behavior temporarily while pairing confirmation is pending:
+
+* **Short press** (< 500 ms): Reject pairing
+* **Long press** (> 2000 ms): Confirm pairing
+
+The mode-switch button behavior is restored after pairing is completed or rejected.
+
+Configuration
+*************
+
+|config|
+
+Choosing the model backend
+==========================
+
+The application supports two execution backends:
+
+* `Neuton models`_ - Highly optimized models that run on the CPU.
+* `Axon NPU`_ - Models that run on the Axon NPU (AI accelerator core).
+
+The Neuton model is used by default on all boards that do not have the Axon NPU.
+You can use the Axon model by enabling the ``CONFIG_NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON`` Kconfig option.
+
+Choosing Bluetooth LE HID pairing security
+==========================================
+
+In Bluetooth HID mode, the pairing behavior is controlled by the ``CONFIG_BLE_MITM_AUTH`` Kconfig option:
+
+* ``CONFIG_BLE_MITM_AUTH=y`` enables MITM-protected pairing.
+   The application requests Bluetooth LE Security Level 4, and pairing uses passkey confirmation on the user button.
+* ``CONFIG_BLE_MITM_AUTH=n`` disables MITM protection.
+   The application requests Bluetooth LE Security Level 2, and pairing uses unauthenticated encrypted pairing without passkey confirmation.
+
+This option is relevant only when the ``CONFIG_BLE_MODE_HID`` option is enabled.
+By default, it is enabled in :file:`prj.conf` and disabled in :file:`prj_release.conf`.
+
+Build types
+===========
+
+Each board directory contains per-board configuration files for different build types.
+See :ref:`nrf:app_build_additions_build_types` and :ref:`nrf:cmake_options` for more information.
+The application supports the following build types:
+
+.. list-table:: Gesture Recognition build types
+   :widths: auto
+   :header-rows: 1
+
+   * - Build type
+     - File name
+     - Description
+   * - Debug (default)
+     - :file:`prj.conf`
+     - Debug version of the application with logging and assertions enabled. BLE HID MITM protection (``CONFIG_BLE_MITM_AUTH``) is enabled by default.
+   * - Release
+     - :file:`prj_release.conf`
+     - Release version of the application with logging disabled, compiler optimizations, and reduced LED activity for lower power consumption. BLE HID MITM protection (``CONFIG_BLE_MITM_AUTH``) is disabled by default.
+   * - Release without Bluetooth LE
+     - :file:`prj_release_no_ble.conf`
+     - Release version of the application without Bluetooth LE, but with serial logging enabled for diagnostics.
+
+Choosing Bluetooth LE mode
+==========================
+
+The application supports four mutually exclusive Bluetooth LE modes.
+Select one in the :file:`prj.conf` file or through ``menuconfig`` (Application Options → Bluetooth LE mode):
+
+* Bluetooth HID mode - Used when the ``CONFIG_BLE_MODE_HID`` Kconfig option is enabled.
+  The device is a Bluetooth keyboard that sends keystrokes based on recognized gestures.
+  It is not available in data collection mode, which is the default mode when the ``CONFIG_DATA_COLLECTION_MODE`` Kconfig option is disabled.
+* No Bluetooth LE mode - Used when the ``CONFIG_BLE_MODE_NONE`` Kconfig option is enabled.
+  In this mode, Bluetooth is disabled.
+  Inference results and data collection use serial connection only.
+* Bluetooth LE NUS mode - Used when the ``CONFIG_BLE_MODE_NUS`` Kconfig option is enabled.
+  In this mode, the device forwards raw IMU samples over the Nordic UART Service.
+  This mode is available only in data collection mode, which is the default when the ``CONFIG_DATA_COLLECTION_MODE`` Kconfig option is enabled.
+  For more information, see :ref:`building_firmware_for_data_collection`.
+* Bluetooth LE GATT mode - Used when the ``CONFIG_BLE_MODE_GATT_CUSTOM`` Kconfig option is enabled.
+  In this mode, the device exposes a custom GATT service called "neuton_gatt" that sends inference results in the format ``<class_label>,<probability>``.
+  This mode is not available in data collection mode.
+
+.. _building_firmware_for_data_collection:
+
+Building firmware for data collection
+=====================================
+
+It is possible to create a build that outputs raw data from the accelerometer and gyro sensors on the serial port.
+No inference is performed in this mode.
+This allows to capture data for training new models and to test and implement new use cases.
+The output consists of 16-bit integers separated by a comma, in the following order:
+
+.. code-block::
+
+   <acc_x>,<acc_y>,<acc_z>,<gyro_x>,<gyro_y>,<gyro_z>
+
+Column headers are not included.
+The output rate is the configured sampling frequency (default 100 Hz).
+
+You can find raw datasets used for model training on the `training dataset`_ page.
+
+1. To build this version, enable the following option in the :file:`prj.conf` file:
+
+   .. code-block::
+
+      CONFIG_DATA_COLLECTION_MODE=y
+      CONFIG_BLE_MODE_NONE=y
+
+#. If you want to forward the same data over Bluetooth LE using :ref:`nrf:nus_service_readme`, additionally switch from No BLE mode to NUS mode:
+
+   .. code-block::
+
+      CONFIG_DATA_COLLECTION_MODE=y
+      CONFIG_BLE_MODE_NUS=y
+
+   In this mode, you must have an additional development kit running the :ref:`Central UART sample <nrf:central_uart>` to receive the NUS data.
+
+   .. note::
+      When using Bluetooth LE NUS mode, some samples may be lost due to RF noise or increased distance between the device and the central.
+      To help track lost samples, the application prepends a sequential ID to each sample transmitted over NUS.
+      Use the :file:`scripts/check_nus_data.py` script to check for dropped samples and strip the ID from the received data.
+
+Building and running
+********************
+
+.. |application path| replace:: :file:`applications/gesture_recognition`
+
+.. include:: /includes/application_build_and_run.txt
+
+Testing
+=======
+
+|test_application|
+
+1. |connect_kit|
+#. |connect_terminal_kit|
+   Connect to the serial device printing console output.
+#. When performing gestures with the device, the serial port terminal displays messages similar to the following:
+
+   .. code-block:: console
+
+      Predicted class: DOUBLE SHAKE, with probability 96 %
+      BLE HID key sent successfully
+      Predicted class: SWIPE RIGHT, with probability 99 %
+      BLE HID key sent successfully
+      Predicted class: SWIPE LEFT, with probability 99 %
+      BLE HID key sent successfully
+      Predicted class: ROTATION RIGHT, with probability 93 %
+      BLE HID key sent successfully
+
+   Once the device is running, Bluetooth LE advertising starts as a HID device and waits for a connection request from the PC.
+   Devices can be connected in the same way as a regular Bluetooth keyboard.
+
+#. Pair the Bluetooth device with your PC.
+#. Once connected successfully, the serial port terminal returns log messages similar to the following:
+
+   .. code-block::
+
+      Connected 9C:B6:D0:C0:CE:FC (public)
+      Security changed: 9C:B6:D0:C0:CE:FC (public) level 4
+
+   With ``CONFIG_BLE_MITM_AUTH=y``, the connection is raised to Security Level 4 and the terminal prints the passkey and available button actions:
+
+   .. code-block::
+
+      Passkey for 9C:B6:D0:C0:CE:FC (public): 123456
+      ===== Button Functionality (Pairing Confirmation Mode) =====
+      Short press (< 500 ms): Reject pairing
+      Long press  (> 2000 ms): Confirm pairing
+      ==============================================
+
+   Use a **long press** (> 2000 ms) on the user button to confirm the passkey, or a **short press** (< 500 ms) to reject it.
+
+   With ``CONFIG_BLE_MITM_AUTH=n``, pairing does not require passkey confirmation and the terminal log shows Security Level 2 instead:
+
+   .. code-block::
+
+      Connected 9C:B6:D0:C0:CE:FC (public)
+      Security changed: 9C:B6:D0:C0:CE:FC (public) level 2
+
+   After Bluetooth connection, the device changes LED indication from red to green, or red to blue depending on the keyboard control mode.
+   You can now use the device to control media playback or presentation slides by making gestures.
+
+Gestures overview
+*****************
+
+This section describes the gesture‑to‑action mapping for Presentation Control and Music Control modes.
+
+.. list-table:: Gestures to keyboard keys mapping
+   :header-rows: 1
+
+   * - Gesture
+     - Presentation control - blue LED
+     - Music control - green LED
+   * - Double shake
+     - F5
+     - Media play/pause
+   * - Double tap
+     - Escape
+     - Media mute
+   * - Swipe right
+     - Arrow right
+     - Media next
+   * - Swipe left
+     - Arrow left
+     - Media previous
+   * - Rotation clockwise
+     - Not used
+     - Media volume up
+   * - Rotation counter-clockwise
+     - Not used
+     - Media volume down
+
+Making gestures
+===============
+
+This section shows the correct device orientation and motion for performing supported gestures.
+The model was trained with a limited dataset.
+For optimal gesture recognition across different users, follow the instructions carefully and train a new model with a larger dataset.
+
+Make sure the default (initial) position of the device matches the following:
+
+.. tabs::
+
+   .. group-tab:: Thingy53
+
+      .. figure:: images/initial_orientation_thingy.gif
+         :alt: Initial orientation (Thingy53)
+
+   .. group-tab:: nRF54LM20 DK
+
+      .. figure:: images/initial_orientation_54lm20.gif
+         :alt: Initial orientation (nRF54LM20 DK)
+
+   .. group-tab:: nRF54L15 TAG
+
+      .. figure:: images/initial_orientation_nrf54l15tag.gif
+         :alt: Initial orientation (nRF54L15 TAG)
+
+Follow the images below to make gestures.
+For better recognition, use your wrists more than your whole hand.
+The gestures are performed with the device in the initial position.
+Keep in mind the device orientation, as it is important for the recognition to work correctly.
+
+.. tabs::
+
+   .. group-tab:: Thingy53
+
+      .. list-table:: Swipe right and left
+         :header-rows: 1
+
+         * - Swipe right
+           - Swipe left
+         * - .. figure:: images/swipe_right_thingy.gif
+                :alt: Swipe right
+           - .. figure:: images/swipe_left_thingy.gif
+                :alt: Swipe left
+
+      .. list-table:: Rotation clockwise and counter-clockwise
+         :header-rows: 1
+
+         * - Rotation clockwise
+           - Rotation counter-clockwise
+         * - .. figure:: images/rotation_right_thingy.gif
+                :alt: Rotation clockwise
+           - .. figure:: images/rotation_left_thingy.gif
+                :alt: Rotation counter-clockwise
+
+      .. list-table:: Double shake and double tap
+         :header-rows: 1
+
+         * - Double shake
+           - Double tap
+         * - .. figure:: images/double_shake_thingy.gif
+                :alt: Double shake
+           - .. figure:: images/double_tap_thingy.gif
+                :alt: Double tap
+
+   .. group-tab:: nRF54LM20 DK
+
+      .. list-table:: Swipe right and left
+         :header-rows: 1
+
+         * - Swipe right
+           - Swipe left
+         * - .. figure:: images/swipe_right_nrf54lm20.gif
+                :alt: Swipe right
+           - .. figure:: images/swipe_left_nrf54lm20.gif
+                :alt: Swipe left
+
+      .. list-table:: Rotation clockwise and counter-clockwise
+         :header-rows: 1
+
+         * - Rotation clockwise
+           - Rotation counter-clockwise
+         * - .. figure:: images/rotation_right_nrf54lm20.gif
+                :alt: Rotation clockwise
+           - .. figure:: images/rotation_left_nrf54lm20.gif
+                :alt: Rotation counter-clockwise
+
+      .. list-table:: Double shake and double tap
+         :header-rows: 1
+
+         * - Double shake
+           - Double tap
+         * - .. figure:: images/double_shake_nrf54lm20.gif
+                :alt: Double shake
+           - .. figure:: images/double_tap_nrf54lm20.gif
+                :alt: Double tap
+
+   .. group-tab:: nRF54L15 TAG
+
+      .. list-table:: Swipe right and left
+         :header-rows: 1
+
+         * - Swipe right
+           - Swipe left
+         * - .. figure:: images/swipe_right_nrf54l15tag.gif
+                :alt: Swipe right
+           - .. figure:: images/swipe_left_nrf54l15tag.gif
+                :alt: Swipe left
+
+      .. list-table:: Rotation clockwise and counter-clockwise
+         :header-rows: 1
+
+         * - Rotation clockwise
+           - Rotation counter-clockwise
+         * - .. figure:: images/rotation_right_nrf54l15tag.gif
+                :alt: Rotation clockwise
+           - .. figure:: images/rotation_left_nrf54l15tag.gif
+                :alt: Rotation counter-clockwise
+
+      .. list-table:: Double shake and double tap
+         :header-rows: 1
+
+         * - Double shake
+           - Double tap
+         * - .. figure:: images/double_shake_nrf54l15tag.gif
+                :alt: Double shake
+           - .. figure:: images/double_tap_nrf54l15tag.gif
+                :alt: Double tap
+
+Dependencies
+************
+
+This sample uses the following |NCS| services:
+
+* :ref:`nrf:nus_service_readme`
+* :ref:`nrf:hids_readme`
+
+This sample uses the following Zephyr libraries:
+
+* :ref:`zephyr:logging_api`
+* :ref:`zephyr:sensor`

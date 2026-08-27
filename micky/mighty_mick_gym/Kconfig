@@ -1,0 +1,142 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+config IMU_DATARATE_HZ
+	int "IMU sample rate (Hz)"
+	default 256
+
+config IMU_SEND_BURSTS
+	bool "Only send bursts of data"
+	default y
+	help
+	  Rather than a continous stream, only send bursts of data
+	  
+
+config IMU_MAX_DELAY_BETWEEN_BURST
+	int "Max delay between burst send" 
+	default 0
+	depends on IMU_SEND_BURSTS
+	help
+	  If non-zero, data will be sent regardless of detection every IMU_MAX_DELAY_BETWEEN_BURST seconds.
+
+config CONTINUOUS_COLLECTION
+	bool "Blocks of sensor data are sent continuously"
+
+config LED_NOTIFICATION_BLINK
+	bool "Notification LED blink on event only"
+	help
+	  When enabled, the LED blinks a few times on state changes
+	  (BLE connect/disconnect, mode switch via button) and then stays
+	  off until the next event. This reduces current consumption.
+	  When disabled (default), the status LED smoothly pulses using
+	  PWM brightness changes driven by a periodic timer.
+
+config DATA_COLLECTION_MODE
+	bool "Enable Data Collection Mode (no inference run)"
+
+choice NRF_EDGEAI_GESTURE_RECOGNITION_MODEL
+	prompt "Edge AI model backend"
+	default NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON if SOC_NRF54LM20B
+	default NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_NEUTON
+	help
+	  Select which model implementation to use. Axon (NPU) is only available
+	  on nRF54L20 (nrf54lm20b). Other boards use Neuton (CPU).
+
+config NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_NEUTON
+	bool "Neuton (CPU)"
+	help
+	  Use the Neuton model. Works on all supported boards.
+
+config NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON
+	bool "Axon (NPU)"
+	depends on SOC_NRF54LM20B
+	select NRF_AXON
+	help
+	  Use the Axon model. Only available on Axon-enabled devices.
+
+endchoice
+
+choice BLE_MODE
+	prompt "BLE mode"
+	
+config BLE_MODE_NONE
+	bool "No BLE"
+	help
+	  Disable Bluetooth. Inference results and data collection use serial only.
+
+config BLE_MODE_HID
+	bool "BLE HID (keyboard emulation)"
+	depends on BT
+	select BT_HIDS
+	select BT_DIS
+	select BT_DIS_PNP
+	select BT_BAS
+	help
+	  Use BLE HID for gesture-to-keyboard mapping (inference mode).
+
+config BLE_MODE_NUS
+	bool "BLE NUS (Nordic UART Service)"
+	depends on BT
+	select BT_NUS
+	select BT_DIS
+	select BT_DIS_PNP
+	select BT_BAS
+	help
+	  Forward raw IMU samples over Nordic UART Service. A second development
+	  kit running the Bluetooth Central UART sample is needed to receive
+	  the data.
+	  
+
+config BLE_MODE_NUS_BINARY
+	bool "BLE NUS binary data"
+	depends on BLE_MODE_NUS
+	help
+		Forward raw IMU samples over UART as *binary* data.
+		
+	
+
+config BLE_MODE_GATT_CUSTOM
+	bool "BLE GATT (custom GATT service)"
+	depends on BT
+	select BT_BAS
+	select BT_DIS
+	select BT_DIS_PNP
+	help
+	  Use custom GATT service to send inference results (class_label,probability).
+
+endchoice
+
+config BLE_MITM_AUTH
+	bool "Require MITM-protected pairing for BLE HID"
+	depends on BLE_MODE_HID
+	select BT_SMP
+	select BT_SMP_ENFORCE_MITM
+	select BT_SMP_SC_ONLY
+	default y
+	help
+	  Enforce Man-In-The-Middle (MITM) protection during BLE pairing,
+	  raising the link to Security Level 4 (Authenticated LE Secure
+	  Connections).
+
+	  With this option enabled, pairing requires an authenticated method
+	  such as Passkey Entry or Numeric Comparison, which prevents a nearby
+	  attacker from impersonating the host (or this device) during pairing
+	  and injecting or eavesdropping on HID traffic (e.g. keystrokes).
+
+	  Strongly recommended for BLE HID. Disable only for testing or when
+	  no I/O capability is available on the device.
+
+# Align HID characteristic permissions with the pairing security level:
+#   - MITM on  -> require authenticated access (Security Level 3/4)
+#   - MITM off -> require encryption only      (Security Level 2)
+# This prevents a mismatch where characteristics demand authenticated
+# access while pairing is unauthenticated (which would break connections).
+choice BT_HIDS_DEFAULT_PERM
+	default BT_HIDS_DEFAULT_PERM_RW_AUTHEN  if BLE_MITM_AUTH
+	default BT_HIDS_DEFAULT_PERM_RW_ENCRYPT if BLE_MODE_HID
+endchoice
+
+source "Kconfig.zephyr"
