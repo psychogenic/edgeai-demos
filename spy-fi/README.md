@@ -2,7 +2,7 @@
 
 This is my "wireless keyboard" snooper (through the sound of my keyboard).
 
-The [./keycapture/](keycapture) directory is what I used to train.  Install it on the DK, with something like
+The [keycapture](./keycapture/) directory is what I used to train.  Install it on the DK, with something like
 
 ```
 west build -p always -b nrf54lm20dk/nrf54lm20b/cpuapp path/to/keycapture
@@ -11,9 +11,9 @@ west flash
 
 Once that's running and you can see binary junk on the serial port (/dev/ttyACM1 on my system), it's ready to for grabbing training data.
 
-See the [./resources/](resources/) dir for scripts to actually capture samples and prepare training data from the desktop.
+See the [resources](./resources/) dir for scripts to actually capture samples and prepare training data from the desktop.
 
-The [./keysnoop/](keysnoop/) directory is the actual Axon inference runner, a hacked up version of the keyword/wakeword app demo from Nordic Semi.
+The [keysnoop](./keysnoop/) directory is the actual Axon inference runner, a hacked up version of the keyword/wakeword app demo from Nordic Semi.
 
 ```
 west build -p always -b nrf54lm20dk/nrf54lm20b/cpuapp path/to/keysnoop

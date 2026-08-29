@@ -8,7 +8,7 @@ This is the code as used in the video about the [Nordic Edge AI](https://www.nor
 
 ### Spy-Fi Key Snooper
 
-The stuff related to the first demo is in [./spy-fi/](spy-fi/).  The boxing classifier tag stuff is in [./micky](micky/).
+The stuff related to the first demo is in [spy-fi](./spy-fi/).  The boxing classifier tag stuff is in [micky](./micky/).
 
 
 All my stuff is
