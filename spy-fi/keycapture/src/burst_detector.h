@@ -4,21 +4,22 @@
 /*
  * burst_detector
  *
- * Portability note: this code relies on arithmetic (sign-extending)
- * right shift for negative signed integers, to match Python's ">>"
- * (which always floors). This is implementation-defined behavior in C
- * before C23, but is what every mainstream compiler (gcc, clang, msvc)
- * actually does on twos-complement targets. If you need strict
- * standards compliance, replace `x >> k` on int64_t with the
- * `ashr64()` helper below (a portable floor-shift)
+ * I started with burst detections in the keycapture.py
+ * and tried to have the C version match as closely as possible.
+ * Traces of that remain but are now irrelevant.
+ *
+ * As explained in the video, that was backwards, a mistake
+ * and a big waste of time.
+ * Still, it's been left mostly as-is and the important thing is to
+ * tweak this code so you're happy with your burst prior to collecting
+ * a bunch of data for training.
+ *
  */
 
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
-
-/* ---------------- Config (matches the Python knobs) ---------------- */
 
 #define RING_BITS      13
 #define RING_SIZE      (1u << RING_BITS)      /* 8192 samples */
@@ -42,13 +43,6 @@ typedef enum {
     ST_CAPTURING
 } bd_state_t;
 
-/* Portable floor-shift, provided for strict-standards builds.
- * Not used by default -- see portability note above. */
-static inline int64_t ashr64(int64_t x, int shift) {
-    /* floor(x / 2^shift), matching Python's >> for negative x */
-    if (x >= 0) return x >> shift;
-    return -(((-x - 1) >> shift) + 1);
-}
 
 /* Callback signature: fired once per completed capture.
  * `block` is BLOCK_LEN samples, valid only for the duration of the call
@@ -146,7 +140,7 @@ static inline void bd_detect_step(burst_detector_t *bd, uint16_t sample)
      * 2^DC_SHIFT the shift truncates to 0 and the estimate can freeze
      * permanently. Keeping a higher-precision accumulator retains that
      * remainder across samples so small errors eventually accumulate
-     * past a shift boundary and get corrected. (Matches Python.) */
+     * past a shift boundary and get corrected. */
     bd->dc_acc += (int64_t)sample - (bd->dc_acc >> DC_SHIFT);
     bd->dc_est = bd->dc_acc >> DC_SHIFT;
 

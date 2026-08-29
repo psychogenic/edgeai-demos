@@ -9,6 +9,9 @@
 #include <nrf_edgeai/rt/private/nrf_edgeai_interfaces.h>
 #include <assert.h>
 
+#error "This model no worky -- didn't want to expose my keyboard that badly... grab training data for your own"
+
+
 //////////////////////////////////////////////////////////////////////////////
 /* Nordic EdgeAI Lab Solution ID and Runtime Version */
 #define EDGEAI_LAB_SOLUTION_ID_STR      "95207"

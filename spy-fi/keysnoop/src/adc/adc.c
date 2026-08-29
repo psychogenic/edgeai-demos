@@ -2,8 +2,9 @@
  * adc.c, part of the Nordic project
  *
  *  Created on: Aug 2, 2026
- *      Author: Pat Deegan
- *  Copyright (C) 2022 Pat Deegan, https://psychogenic.com
+ * Basic SAADC code lifted from some NordicSemi example
+ * I've lost track of.
+ *
  */
 
 
