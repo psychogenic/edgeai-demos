@@ -6,6 +6,11 @@ Edge AI lab demos: keysnooper (acoustic side-channel classification) and boxing 
 
 This is the code as used in the video about the [Nordic Edge AI](https://www.nordicsemi.com/Products/Technologies/Edge-AI) [Lab](https://app.lab.nordicsemi.com/).
 
+### Spy-Fi Key Snooper
+
+The stuff related to the first demo is in [./spy-fi/](spy-fi/).  The boxing classifier tag stuff is in [./micky](micky/).
+
+
 All my stuff is
 
 Copyright &copy; 2026 Pat Deegan, [psychogenic.com](https://psychogenic.com)
